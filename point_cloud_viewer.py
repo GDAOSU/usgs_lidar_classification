@@ -227,7 +227,7 @@ def build_interface():
 
         def on_clear():
             return (
-                None, None, None, None, None, None, None, "PointTransformer", 100_000)
+                None, None, None, None, None, None, None, "PointTransformer", 100_000, None, None)
 
         clear_btn.click(
             fn=on_clear,
@@ -242,6 +242,8 @@ def build_interface():
                 file_input,
                 method_dd,
                 max_points_slider,
+                downsampled_classified_las_file_out,
+                upsampled_classified_las_file_out,
             ]
         )
 
