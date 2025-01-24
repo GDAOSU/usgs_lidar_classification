@@ -341,7 +341,6 @@ def build_interface():
             original_las = laspy.read(original_las_path)
             downsampled_las = laspy.read(downsampled_las_path)
 
-            # change the offset of downsampled las to original las
             classified_las = laspy.read(classified_las_path)
             classified_las_ori_new_x = (
                 (classified_las.points['X'] * classified_las.header.scale[0] + classified_las.header.offset[0] - downsampled_las.header.offset[0]) /
@@ -355,21 +354,9 @@ def build_interface():
                 (classified_las.points['Z'] * classified_las.header.scale[2] + classified_las.header.offset[2] - downsampled_las.header.offset[2]) /
                 downsampled_las.header.scale[2]).astype(
                 np.int32)
-            classified_las.points['X'] = classified_las_ori_new_x
-            classified_las.points['Y'] = classified_las_ori_new_y
-            classified_las.points['Z'] = classified_las_ori_new_z
-            classified_las.header.offset = downsampled_las.header.offset
             
-            shift_classified_las_path = classified_las_path.replace('.las', '_shifted.las')
-            classified_las.write(shift_classified_las_path) # write to update the header
-
-           
-            classified_las = laspy.read(shift_classified_las_path)
-            classified_X = classified_las.points['X']
-            classified_Y = classified_las.points['Y']
-            classified_Z = classified_las.points['Z']
             classified_class = classified_las.points['classification']
-            classified_points = np.column_stack((classified_X, classified_Y, classified_Z, classified_class)).astype('float64')
+            classified_points = np.column_stack((classified_las_ori_new_x, classified_las_ori_new_y, classified_las_ori_new_z, classified_class)).astype('float64')
             tree = cKDTree(classified_points[:, :3])
             original_xyz = np.column_stack((
                 original_las.points['X'],
