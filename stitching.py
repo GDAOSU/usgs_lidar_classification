@@ -17,6 +17,7 @@ def write_las(xyz, intensity, return_num, classification, xyz_offset, out_las_pa
     las.y = xyz[:,1]
     las.z = xyz[:,2]
     las.intensity = intensity
+    return_num = return_num.astype(np.uint8)
     las.return_num = return_num
     las.classification = classification
 
@@ -31,7 +32,7 @@ def _get_parser():
     parser.add_argument("--out_las_path", type=Path, required=True)
     return parser
   
-def _main():
+def stitching():
     parser = _get_parser()
     args = parser.parse_args()
     
@@ -40,10 +41,10 @@ def _main():
     in_label_suffix = args.in_label_suffix
     out_las_path = args.out_las_path
     
-    # in_pkl_dir = Path("dataset/USGS_LAZ/VerdeKaibab_AZ/USGS_LPC_AZ_VerdeKaibab_2018_B18_w1453n1480_tiles")
+    # in_pkl_dir = Path("/local/scratch0/hanyang/Codes/point_cloud_visualizer/tmp_dir/tiles")
     in_pkl_paths = list(in_pkl_dir.glob("x*_y*.pkl"))
     
-    # in_label_dir = Path("dataset/USGS_LAZ/VerdeKaibab_AZ/USGS_LPC_AZ_VerdeKaibab_2018_B18_w1453n1480_tiles/dfc2019_pointtransformer_repro/")
+    in_label_dir = Path("/local/scratch0/hanyang/Codes/point_cloud_visualizer/tmp_dir/tile_classification_results")
     # in_label_suffix = "label"
     # out_las_path = in_pkl_dir / f"{in_label_suffix}.las"
 
@@ -76,4 +77,4 @@ def _main():
     print("Done")
 
 if __name__ == "__main__":
-    _main()
+    stitching()

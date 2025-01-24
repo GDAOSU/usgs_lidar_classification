@@ -10,6 +10,23 @@ import numpy as np
 import laspy
 from open3d import geometry
 from scipy.spatial import cKDTree
+import shutil
+from tiling import tiling
+
+TEMP_DIR = r'/local/scratch0/hanyang/Codes/point_cloud_visualizer/tmp_dir'
+os.makedirs(TEMP_DIR, exist_ok=True)
+
+
+def clear_temp_folder():
+    try:
+        shutil.rmtree(TEMP_DIR)
+        os.makedirs(TEMP_DIR)
+    except Exception as e:
+        print(f"Error clearing temp folder: {e}")
+
+
+def get_temp_file(suffix):
+    return tempfile.NamedTemporaryFile(dir=TEMP_DIR, suffix=suffix, delete=False)
 
 
 def convert_las_to_glb(las_file_path, glb_file_path):
@@ -117,7 +134,7 @@ def convert_las_to_glb(las_file_path, glb_file_path):
 
 def build_interface():
     with gr.Blocks() as main_viewer:
-        gr.Markdown("## Point Cloud Viewer")
+        gr.Markdown("## Point Cloud Classification Visualizer")
 
         original_las_path_state = gr.State()
         downsampled_las_path_state = gr.State()
@@ -138,7 +155,7 @@ def build_interface():
             with gr.Column():
                 file_input = gr.File(
                     label="Upload LAS File",
-                    type="binary",
+                    type="filepath",
                 )
                 method_dd = gr.Dropdown(
                     label='Selet Method',
@@ -148,18 +165,19 @@ def build_interface():
                 max_points_slider = gr.Slider(
                     label='Max Num. of Points',
                     minimum=1,
-                    maximum=1_000_000,
+                    maximum=10_000_000,
                     value=100_000,
                     step=1
                 )
             with gr.Column():
-                clear_btn = gr.Button("Clear")
-                classify_btn = gr.Button("Classify")
-                download_downsampled_btn = gr.Button("Download Downsampled")
-                download_upsampled_btn = gr.Button("Download Upsampled")
-
-                downsampled_classified_las_file_out = gr.File(visible=True)
-                upsampled_classified_las_file_out = gr.File(visible=True)
+                with gr.Row():
+                    clear_btn = gr.Button("Clear")
+                    classify_btn = gr.Button("Classify")
+                with gr.Row():
+                    download_downsampled_btn = gr.Button("Download Downsampled")
+                    download_upsampled_btn = gr.Button("Download Upsampled")
+                downsampled_classified_las_file_out = gr.File(visible=True, label="Downsampled Classified LAS")
+                upsampled_classified_las_file_out = gr.File(visible=True, label="Upsampled Classified LAS")
 
         ##############################
         # Event handlers
@@ -167,15 +185,24 @@ def build_interface():
 
         def on_file_input_and_slider_change(file_input, max_points):
             if file_input is None:
+                clear_temp_folder()
                 return None, None, None
 
-            with tempfile.NamedTemporaryFile(suffix='.las', delete=False) as tmp:
-                tmp.write(file_input)
-                tmp.close()
-                original_las_pth = tmp.name
+            if not file_input.endswith('.las') and not file_input.endswith('.laz'):
+                raise ValueError("Only .las and .laz files are supported")
 
-            downsampled_las_pth = original_las_pth.replace('.las', '_downsampled.las')
-            original_las = laspy.read(original_las_pth)
+            clear_temp_folder()
+            global SUFFIX
+            SUFFIX = '.las' if file_input.endswith('.las') else '.laz'
+            if SUFFIX == '.las':
+                original_las = laspy.read(file_input)
+            elif SUFFIX == '.laz':
+                original_las = laspy.read(file_input, laz_backend=laspy.LazBackend.Laszip)
+            original_las_pth = shutil.copy(file_input, TEMP_DIR)
+            original_las.write(original_las_pth)
+
+            downsampled_las_pth = original_las_pth.replace(SUFFIX, '_downsampled.las')
+            # original_las = laspy.read(original_las_pth)
             total_points = len(original_las)
             print(f"Total points: {total_points}")
             if total_points < max_points:
@@ -191,7 +218,13 @@ def build_interface():
                 original_pcd = o3d.geometry.PointCloud()
                 original_pcd.points = o3d.utility.Vector3dVector(vertices)
                 original_points = np.asarray(original_pcd.points)
-                voxel_size = np.cbrt((original_pcd.get_max_bound() - original_pcd.get_min_bound()).prod() / max_points)
+                # strategy 1: use cube voxel size
+                # voxel_size = np.cbrt((original_pcd.get_max_bound() - original_pcd.get_min_bound()).prod() / max_points)
+                # strategy 2: use square voxel size
+                # area = (original_pcd.get_max_bound() - original_pcd.get_min_bound())[:2].prod()
+                # voxel_size = np.sqrt(area / max_points)
+                # strategy 3: 1m x 1m x 1m voxel size
+                voxel_size = 5 / original_las.points.scales[0]  # m / scale
                 quantized = np.floor(original_points / voxel_size)
 
                 voxel_dict = {}
@@ -226,6 +259,7 @@ def build_interface():
         )
 
         def on_clear():
+            clear_temp_folder()
             return (
                 None, None, None, None, None, None, None, "PointTransformer", 100_000, None, None)
 
@@ -251,15 +285,27 @@ def build_interface():
             if original_las_path is None:
                 return None, None
 
-            # classify point cloud
-            # TODO: implement classification logic
-            downsampled_las = laspy.read(downsampled_las_path)
-            classified_las = downsampled_las
+            # classification logic
+            # 1. tiling point cloud
+            conda_env_name = "o3d_ml"
+            tiling_script = "/local/scratch0/hanyang/Codes/point_cloud_visualizer/tiling.py"
+            tiling_save_dir = TEMP_DIR + '/tiles'
+            block_width = 512
+            os.system(
+                f"conda run -n {conda_env_name} python {tiling_script} --in_path {downsampled_las_path} --out_dir {tiling_save_dir} --block_width {block_width}")
+            # 2. inference using a different conda environment
+            interface_script = "/local/scratch0/hanyang/Codes/point_cloud_visualizer/inference.py"
+            test_folder = tiling_save_dir
+            test_result_folder = TEMP_DIR + '/tile_classification_results'
+            os.system(f"conda run -n {conda_env_name} python {interface_script} --test_folder {test_folder} --test_result_folder {test_result_folder}")
+            # 3. merge classified tiles
+            in_pkl_dir = tiling_save_dir
+            in_label_dir = test_result_folder
+            classified_las_path = downsampled_las_path.replace('.las', '_classified.las')
+            os.system(f"conda run -n {conda_env_name} python /local/scratch0/hanyang/Codes/point_cloud_visualizer/stitching.py --in_pkl_dir {in_pkl_dir} --in_label_dir {in_label_dir} --out_las_path {classified_las_path}")
 
-            classified_las_path = downsampled_las_path.replace('_downsampled.las', '_classified.las')
-            classified_las.write(classified_las_path)
             classified_glb_path = classified_las_path.replace('.las', '.glb')
-            convert_las_to_glb(downsampled_las_path, classified_glb_path)
+            convert_las_to_glb(classified_las_path, classified_glb_path)
             return classified_las_path, classified_glb_path
 
         classify_btn.click(
@@ -272,44 +318,73 @@ def build_interface():
             outputs=[classified_las_path_state, viewer2]
         )
 
-        def on_download_downsampled(downsampled_las_path):
-            if downsampled_las_path is None:
+        def on_download_downsampled(downsampled_classified_las_path, original_las_path):
+            if downsampled_classified_las_path is None:
                 return None
-            return downsampled_las_path
+
+            if SUFFIX == '.laz':
+                revised_downsampled_classified_las = laspy.read(downsampled_classified_las_path)
+                new_las_path = downsampled_classified_las_path.replace('.las', '.laz')
+                revised_downsampled_classified_las.write(new_las_path, laz_backend=laspy.LazBackend.Laszip)
+                downsampled_classified_las_path = new_las_path
+            return downsampled_classified_las_path
 
         download_downsampled_btn.click(
             fn=on_download_downsampled,
-            inputs=[classified_las_path_state],
+            inputs=[classified_las_path_state, original_las_path_state],
             outputs=[downsampled_classified_las_file_out]
         )
 
         def on_download_upsampled(original_las_path, downsampled_las_path, classified_las_path, upsampled_las_path):
             if original_las_path is None:
                 return None
-            # check if points in original las and downsampled las are the same
             original_las = laspy.read(original_las_path)
             downsampled_las = laspy.read(downsampled_las_path)
-            ration = len(downsampled_las.points) / len(original_las.points)
-            if ration > 0.9:
-                # use classified result as upsampled result
-                upsampled_las_path = classified_las_path
-            else:
-                classified_las = laspy.read(classified_las_path)
-                classified_X = classified_las.points['X']
-                classified_Y = classified_las.points['Y']
-                classified_Z = classified_las.points['Z']
-                classified_class = classified_las.points['classification']
-                classified_points = np.column_stack((classified_X, classified_Y, classified_Z, classified_class)).astype('float64')
-                tree = cKDTree(classified_points[:, :3])
-                original_xyz = np.column_stack((
-                    original_las.points['X'],
-                    original_las.points['Y'],
-                    original_las.points['Z'],
-                )).astype(np.float64)
-                _, idx = tree.query(original_xyz, k=1)
-                original_las.points['classification'] = classified_points[idx, 3].astype(np.uint8)
+
+            # change the offset of downsampled las to original las
+            classified_las = laspy.read(classified_las_path)
+            classified_las_ori_new_x = (
+                (classified_las.points['X'] * classified_las.header.scale[0] + classified_las.header.offset[0] - downsampled_las.header.offset[0]) /
+                downsampled_las.header.scale[0]).astype(
+                np.int32)
+            classified_las_ori_new_y = (
+                (classified_las.points['Y'] * classified_las.header.scale[1] + classified_las.header.offset[1] - downsampled_las.header.offset[1]) /
+                downsampled_las.header.scale[1]).astype(
+                np.int32)
+            classified_las_ori_new_z = (
+                (classified_las.points['Z'] * classified_las.header.scale[2] + classified_las.header.offset[2] - downsampled_las.header.offset[2]) /
+                downsampled_las.header.scale[2]).astype(
+                np.int32)
+            classified_las.points['X'] = classified_las_ori_new_x
+            classified_las.points['Y'] = classified_las_ori_new_y
+            classified_las.points['Z'] = classified_las_ori_new_z
+            classified_las.header.offset = downsampled_las.header.offset
+            
+            shift_classified_las_path = classified_las_path.replace('.las', '_shifted.las')
+            classified_las.write(shift_classified_las_path) # write to update the header
+
+           
+            classified_las = laspy.read(shift_classified_las_path)
+            classified_X = classified_las.points['X']
+            classified_Y = classified_las.points['Y']
+            classified_Z = classified_las.points['Z']
+            classified_class = classified_las.points['classification']
+            classified_points = np.column_stack((classified_X, classified_Y, classified_Z, classified_class)).astype('float64')
+            tree = cKDTree(classified_points[:, :3])
+            original_xyz = np.column_stack((
+                original_las.points['X'],
+                original_las.points['Y'],
+                original_las.points['Z'],
+            )).astype(np.float64)
+            _, idx = tree.query(original_xyz, k=1)
+            original_las.points['classification'] = classified_points[idx, 3].astype(np.uint8)
+            if SUFFIX == '.laz':
+                upsampled_las_path = original_las_path.replace('.laz', '_upsampled_classified.laz')
+            elif SUFFIX == '.las':
                 upsampled_las_path = original_las_path.replace('.las', '_upsampled_classified.las')
-                original_las.write(upsampled_las_path)
+            else:
+                raise ValueError("Unknown file type")
+            original_las.write(upsampled_las_path)
             return upsampled_las_path
 
         download_upsampled_btn.click(
@@ -327,4 +402,4 @@ def build_interface():
 
 if __name__ == "__main__":
     viewer = build_interface()
-    viewer.launch(debug=True)
+    viewer.launch(debug=True, share=True)

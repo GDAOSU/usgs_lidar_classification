@@ -7,7 +7,7 @@ from open3d.ml.torch.pipelines import SemanticSegmentation
 
 from open3d.ml.torch.models import RandLANet, PointTransformer
 
-from dfc2019 import DFC2019
+from classification.dfc2019 import DFC2019
 
 from pathlib import Path
 import sys
@@ -16,20 +16,19 @@ import numpy as np
 from tqdm import trange
 import argparse
 import time
+import os
 
 
-cfg_file = "randlanet_us3d.yml"
+cfg_file = os.path.join(os.path.dirname(__file__), 'classification', 'randlanet_us3d.yml')
 cfg_name = 'RandLANet_US3D_torch'
 ckpt_path = f"logs/{cfg_name}/checkpoint/ckpt_00255.pth"
+ckpt_path = os.path.join(os.path.dirname(__file__), ckpt_path)
 
 ###########
-def _main():
+def inference(test_folder, test_result_folder):
     
-    parser = argparse.ArgumentParser()
-    parser.add_argument("test_folder", type=str, help="Path to the test folder")
-    args = parser.parse_args()
-    test_folder = Path(args.test_folder)
-    test_result_folder = test_folder / cfg_name
+    test_folder = Path(test_folder)
+    test_result_folder = Path(test_result_folder)
     
     _start = time.time()
     cfg = _ml3d.utils.Config.load_from_file(str(cfg_file))
@@ -79,4 +78,8 @@ def _main():
     print(f"Total time: {_duration:.2f}s")
 
 if __name__ == "__main__":
-    _main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--test_folder", type=str, help="Path to the test folder")
+    parser.add_argument("--test_result_folder", type=str, help="Path to the test result folder")
+    args = parser.parse_args()
+    inference(args.test_folder, args.test_result_folder)
