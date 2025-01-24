@@ -1,4 +1,6 @@
-/.vscode
+.vscode
 tmp_dir/
 .gitignore
 tmp_dir_test/
+.gradio/
+__pycache__/
