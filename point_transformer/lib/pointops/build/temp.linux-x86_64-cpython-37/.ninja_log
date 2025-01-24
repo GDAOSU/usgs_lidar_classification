@@ -1,0 +1,14 @@
+# ninja log v6
+2	4221	1737736367387044645	/local/scratch0/hanyang/Codes/point_cloud_visualizer/point_transformer/lib/pointops/build/temp.linux-x86_64-cpython-37/src/interpolation/interpolation_cuda.o	66b54631408e8fc5
+4	4244	1737736367391044708	/local/scratch0/hanyang/Codes/point_cloud_visualizer/point_transformer/lib/pointops/build/temp.linux-x86_64-cpython-37/src/subtraction/subtraction_cuda.o	17979706fbef064c
+1	4312	1737736367387044645	/local/scratch0/hanyang/Codes/point_cloud_visualizer/point_transformer/lib/pointops/build/temp.linux-x86_64-cpython-37/src/aggregation/aggregation_cuda.o	6fc7966b3f31cf13
+3	4456	1737736367391044708	/local/scratch0/hanyang/Codes/point_cloud_visualizer/point_transformer/lib/pointops/build/temp.linux-x86_64-cpython-37/src/knnquery/knnquery_cuda.o	75a504d2d9f54e93
+2	4463	1737736367387044645	/local/scratch0/hanyang/Codes/point_cloud_visualizer/point_transformer/lib/pointops/build/temp.linux-x86_64-cpython-37/src/grouping/grouping_cuda.o	66236119653e04c0
+3	4500	1737736367391044708	/local/scratch0/hanyang/Codes/point_cloud_visualizer/point_transformer/lib/pointops/build/temp.linux-x86_64-cpython-37/src/sampling/sampling_cuda.o	e95426bce94b731b
+1	12438	1737736367387044645	/local/scratch0/hanyang/Codes/point_cloud_visualizer/point_transformer/lib/pointops/build/temp.linux-x86_64-cpython-37/src/aggregation/aggregation_cuda_kernel.o	4d8373a6c0fac951
+3	12453	1737736367391044708	/local/scratch0/hanyang/Codes/point_cloud_visualizer/point_transformer/lib/pointops/build/temp.linux-x86_64-cpython-37/src/knnquery/knnquery_cuda_kernel.o	3ed1554586dc457f
+4	12549	1737736367391044708	/local/scratch0/hanyang/Codes/point_cloud_visualizer/point_transformer/lib/pointops/build/temp.linux-x86_64-cpython-37/src/subtraction/subtraction_cuda_kernel.o	271ee27561dd9c6d
+2	12577	1737736367387044645	/local/scratch0/hanyang/Codes/point_cloud_visualizer/point_transformer/lib/pointops/build/temp.linux-x86_64-cpython-37/src/grouping/grouping_cuda_kernel.o	60fb52b89e99dea9
+2	12599	1737736367387044645	/local/scratch0/hanyang/Codes/point_cloud_visualizer/point_transformer/lib/pointops/build/temp.linux-x86_64-cpython-37/src/interpolation/interpolation_cuda_kernel.o	4d1a4ce0dcb5f8ca
+4	13086	1737736367391044708	/local/scratch0/hanyang/Codes/point_cloud_visualizer/point_transformer/lib/pointops/build/temp.linux-x86_64-cpython-37/src/sampling/sampling_cuda_kernel.o	108a362d553d935a
+3	14831	1737736367391044708	/local/scratch0/hanyang/Codes/point_cloud_visualizer/point_transformer/lib/pointops/build/temp.linux-x86_64-cpython-37/src/pointops_api.o	318b463297d80790

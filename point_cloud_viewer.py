@@ -224,7 +224,7 @@ def build_interface():
                 # area = (original_pcd.get_max_bound() - original_pcd.get_min_bound())[:2].prod()
                 # voxel_size = np.sqrt(area / max_points)
                 # strategy 3: 1m x 1m x 1m voxel size
-                voxel_size = 5 / original_las.points.scales[0]  # m / scale
+                voxel_size = 1 / original_las.points.scales[0]  # m / scale
                 quantized = np.floor(original_points / voxel_size)
 
                 voxel_dict = {}
@@ -280,12 +280,19 @@ def build_interface():
                 upsampled_classified_las_file_out,
             ]
         )
-
-        def on_classify(original_las_path, downsampled_las_path, method):
-            if original_las_path is None:
-                return None, None
-
-            # classification logic
+        
+        def clean_classify_result():
+            try:
+                shutil.rmtree(TEMP_DIR + '/tiles')
+                shutil.rmtree(TEMP_DIR + '/tile_classification_results')
+                for file in os.listdir(TEMP_DIR):
+                    if file.endswith('_classified.glb') or file.endswith('_classified.las'):
+                        os.remove(os.path.join(TEMP_DIR, file))
+            except Exception as e:
+                print(f"Error cleaning classify result: {e}")
+            
+        def classify_randla(downsampled_las_path):
+            clean_classify_result()
             # 1. tiling point cloud
             conda_env_name = "o3d_ml"
             tiling_script = "/local/scratch0/hanyang/Codes/point_cloud_visualizer/tiling.py"
@@ -293,16 +300,51 @@ def build_interface():
             block_width = 512
             os.system(
                 f"conda run -n {conda_env_name} python {tiling_script} --in_path {downsampled_las_path} --out_dir {tiling_save_dir} --block_width {block_width}")
+
             # 2. inference using a different conda environment
-            interface_script = "/local/scratch0/hanyang/Codes/point_cloud_visualizer/inference.py"
+            interface_script = "/local/scratch0/hanyang/Codes/point_cloud_visualizer/randla_inference.py"
             test_folder = tiling_save_dir
             test_result_folder = TEMP_DIR + '/tile_classification_results'
             os.system(f"conda run -n {conda_env_name} python {interface_script} --test_folder {test_folder} --test_result_folder {test_result_folder}")
+
             # 3. merge classified tiles
             in_pkl_dir = tiling_save_dir
             in_label_dir = test_result_folder
             classified_las_path = downsampled_las_path.replace('.las', '_classified.las')
             os.system(f"conda run -n {conda_env_name} python /local/scratch0/hanyang/Codes/point_cloud_visualizer/stitching.py --in_pkl_dir {in_pkl_dir} --in_label_dir {in_label_dir} --out_las_path {classified_las_path}")
+            return classified_las_path
+
+        def classify_pointtransformer(downsampled_las_path):
+            clean_classify_result()
+            # 1. tiling point cloud
+            conda_env_name = "point_transformer"
+            tiling_script = "/local/scratch0/hanyang/Codes/point_cloud_visualizer/tiling.py"
+            tiling_save_dir = TEMP_DIR + '/tiles'
+            block_width = 512
+            os.system(
+                f"conda run -n {conda_env_name} python {tiling_script} --in_path {downsampled_las_path} --out_dir {tiling_save_dir} --block_width {block_width}")
+
+            # 2. inference using a different conda environment
+            interface_script = "/local/scratch0/hanyang/Codes/point_cloud_visualizer/ptrsfmer_inferency.py"
+            os.system(f"conda run -n {conda_env_name} python {interface_script}")
+            # 3. merge classified tiles
+            test_result_folder = TEMP_DIR + '/tile_classification_results'
+            in_pkl_dir = tiling_save_dir
+            in_label_dir = test_result_folder
+            classified_las_path = downsampled_las_path.replace('.las', '_classified.las')
+            os.system(f"conda run -n {conda_env_name} python /local/scratch0/hanyang/Codes/point_cloud_visualizer/stitching.py --in_pkl_dir {in_pkl_dir} --in_label_dir {in_label_dir} --out_las_path {classified_las_path}")
+            return classified_las_path
+
+        def on_classify(original_las_path, downsampled_las_path, method):
+            if original_las_path is None:
+                return None, None
+
+            if method == 'PointTransformer':
+                classified_las_path = classify_pointtransformer(downsampled_las_path)
+            elif method == 'RandLA-Net':
+                classified_las_path = classify_randla(downsampled_las_path)
+            else:
+                raise ValueError("Unknown method")
 
             classified_glb_path = classified_las_path.replace('.las', '.glb')
             convert_las_to_glb(classified_las_path, classified_glb_path)
@@ -354,9 +396,10 @@ def build_interface():
                 (classified_las.points['Z'] * classified_las.header.scale[2] + classified_las.header.offset[2] - downsampled_las.header.offset[2]) /
                 downsampled_las.header.scale[2]).astype(
                 np.int32)
-            
+
             classified_class = classified_las.points['classification']
-            classified_points = np.column_stack((classified_las_ori_new_x, classified_las_ori_new_y, classified_las_ori_new_z, classified_class)).astype('float64')
+            classified_points = np.column_stack((classified_las_ori_new_x, classified_las_ori_new_y,
+                                                classified_las_ori_new_z, classified_class)).astype('float64')
             tree = cKDTree(classified_points[:, :3])
             original_xyz = np.column_stack((
                 original_las.points['X'],

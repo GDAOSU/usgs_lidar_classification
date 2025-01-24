@@ -1,0 +1,52 @@
+DATA:
+  data_name: dfc2019
+  data_root: dataset/dfc2019/trainval
+  classes: 6
+  fea_dim: 5
+  voxel_size: 0.5
+  voxel_max: 80000
+  loop: 30
+
+TRAIN:
+  arch: pointtransformer_seg_repro
+  use_xyz: True
+  sync_bn: False
+  ignore_label: 0
+  train_gpu: [0, 1]
+  workers: 14  # data loader workers
+  batch_size: 14  # batch size for training
+  batch_size_val: 4  # batch size for validation during training, memory and speed tradeoff
+  base_lr: 0.5
+  epochs: 100
+  start_epoch: 0
+  step_epoch: 30
+  multiplier: 0.1
+  momentum: 0.9
+  weight_decay: 0.0001
+  drop_rate: 0.5
+  manual_seed: 7777
+  print_freq: 1
+  save_freq: 1
+  save_path: output/dfc2019/
+  weight:  # path to initial weight (default: none)
+  resume:  # path to latest checkpoint (default: none)
+  evaluate: True  # evaluate on validation set, extra gpu memory needed and small batch_size_val is recommend
+  eval_freq: 1
+Distributed:
+  dist_url: tcp://localhost:44500
+  dist_backend: 'nccl'
+  multiprocessing_distributed: True
+  world_size: 1
+  rank: 0
+
+TEST:
+  test_list: 
+  test_list_full: 
+  split: test  # split in [train, val and test]
+  test_gpu: [0]
+  test_voxel_max: 80000
+  test_workers: 20
+  batch_size_test: 20
+  model_path: point_transformer/model_best.pth
+  save_folder:
+  names_path: point_transformer/dfc2019_names.txt

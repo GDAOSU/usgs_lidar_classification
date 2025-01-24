@@ -47,7 +47,7 @@ def _get_parser():
     parser = argparse.ArgumentParser(description='Tiling Point Cloud')
     parser.add_argument('--block_width', type=float, default=512, help='Block Width (meters)')
     parser.add_argument('--in_path', type=str, required=True, help='Input Point Cloud Path')
-    parser.add_argument('--out_dir', type=str, help='Output Directory')
+    parser.add_argument('--out_dir', type=str, required=True, help='Output Directory')
     return parser
 
 
