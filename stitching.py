@@ -44,7 +44,7 @@ def stitching():
     # in_pkl_dir = Path("/local/scratch0/hanyang/Codes/point_cloud_visualizer/tmp_dir/tiles")
     in_pkl_paths = list(in_pkl_dir.glob("x*_y*.pkl"))
     
-    in_label_dir = Path("/local/scratch0/hanyang/Codes/point_cloud_visualizer/tmp_dir/tile_classification_results")
+    in_label_dir = Path("tmp_dir/tile_classification_results")
     # in_label_suffix = "label"
     # out_las_path = in_pkl_dir / f"{in_label_suffix}.las"
 

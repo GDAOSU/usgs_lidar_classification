@@ -25,13 +25,13 @@ np.random.seed(123)
 def get_parser():
     parser = argparse.ArgumentParser(description='PyTorch Point Cloud Semantic Segmentation')
     parser.add_argument('--config', type=str,
-                        default='/local/scratch0/hanyang/Codes/point_cloud_visualizer/point_transformer/dfc2019_pointtransformer_repro.yaml',
+                        default='point_transformer/dfc2019_pointtransformer_repro.yaml',
                         help='config file')
     parser.add_argument('--data_path', type=str, default=None, help='path to dataset *.pkl')
-    parser.add_argument('--data_dir', type=str, default='/local/scratch0/hanyang/Codes/point_cloud_visualizer/tmp_dir/tiles', help='dataset name')
+    parser.add_argument('--data_dir', type=str, default='tmp_dir/tiles', help='dataset name')
     parser.add_argument('opts', help='see config/s3dis/s3dis_pointtransformer_repro.yaml for all options', default=None, nargs=argparse.REMAINDER)
     parser.add_argument('--save_folder', help='result folder',
-                        default='/local/scratch0/hanyang/Codes/point_cloud_visualizer/tmp_dir/tile_classification_results', type=str)
+                        default='tmp_dir/tile_classification_results', type=str)
     args = parser.parse_args()
     assert args.config is not None
     cfg = config.load_cfg_from_cfg_file(args.config)

@@ -5,15 +5,12 @@ from pygltflib import (
 import open3d as o3d
 import gradio as gr
 import os
-import tempfile
 import numpy as np
 import laspy
-from open3d import geometry
 from scipy.spatial import cKDTree
 import shutil
-from tiling import tiling
 
-TEMP_DIR = r'/local/scratch0/hanyang/Codes/point_cloud_visualizer/tmp_dir'
+TEMP_DIR = os.path.join(os.path.dirname(__file__), 'tmp_dir')
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 
@@ -23,10 +20,6 @@ def clear_temp_folder():
         os.makedirs(TEMP_DIR)
     except Exception as e:
         print(f"Error clearing temp folder: {e}")
-
-
-def get_temp_file(suffix):
-    return tempfile.NamedTemporaryFile(dir=TEMP_DIR, suffix=suffix, delete=False)
 
 
 def convert_las_to_glb(las_file_path, glb_file_path):
@@ -224,7 +217,7 @@ def build_interface():
                 # area = (original_pcd.get_max_bound() - original_pcd.get_min_bound())[:2].prod()
                 # voxel_size = np.sqrt(area / max_points)
                 # strategy 3: 1m x 1m x 1m voxel size
-                voxel_size = 1 / original_las.points.scales[0]  # m / scale
+                voxel_size = 5 / original_las.points.scales[0]  # m / scale
                 quantized = np.floor(original_points / voxel_size)
 
                 voxel_dict = {}
@@ -280,7 +273,7 @@ def build_interface():
                 upsampled_classified_las_file_out,
             ]
         )
-        
+
         def clean_classify_result():
             try:
                 shutil.rmtree(TEMP_DIR + '/tiles')
@@ -290,19 +283,19 @@ def build_interface():
                         os.remove(os.path.join(TEMP_DIR, file))
             except Exception as e:
                 print(f"Error cleaning classify result: {e}")
-            
+
         def classify_randla(downsampled_las_path):
             clean_classify_result()
             # 1. tiling point cloud
             conda_env_name = "o3d_ml"
-            tiling_script = "/local/scratch0/hanyang/Codes/point_cloud_visualizer/tiling.py"
+            tiling_script = os.path.join(os.path.dirname(__file__), 'tiling.py')
             tiling_save_dir = TEMP_DIR + '/tiles'
             block_width = 512
             os.system(
                 f"conda run -n {conda_env_name} python {tiling_script} --in_path {downsampled_las_path} --out_dir {tiling_save_dir} --block_width {block_width}")
 
             # 2. inference using a different conda environment
-            interface_script = "/local/scratch0/hanyang/Codes/point_cloud_visualizer/randla_inference.py"
+            interface_script = os.path.join(os.path.dirname(__file__), 'randla_inference.py')
             test_folder = tiling_save_dir
             test_result_folder = TEMP_DIR + '/tile_classification_results'
             os.system(f"conda run -n {conda_env_name} python {interface_script} --test_folder {test_folder} --test_result_folder {test_result_folder}")
@@ -311,28 +304,30 @@ def build_interface():
             in_pkl_dir = tiling_save_dir
             in_label_dir = test_result_folder
             classified_las_path = downsampled_las_path.replace('.las', '_classified.las')
-            os.system(f"conda run -n {conda_env_name} python /local/scratch0/hanyang/Codes/point_cloud_visualizer/stitching.py --in_pkl_dir {in_pkl_dir} --in_label_dir {in_label_dir} --out_las_path {classified_las_path}")
+            os.system(
+                f"conda run -n {conda_env_name} python {os.path.join(os.path.dirname(__file__), 'stitching.py')} --in_pkl_dir {in_pkl_dir} --in_label_dir {in_label_dir} --out_las_path {classified_las_path}")
             return classified_las_path
 
         def classify_pointtransformer(downsampled_las_path):
             clean_classify_result()
             # 1. tiling point cloud
             conda_env_name = "point_transformer"
-            tiling_script = "/local/scratch0/hanyang/Codes/point_cloud_visualizer/tiling.py"
+            tiling_script = os.path.join(os.path.dirname(__file__), 'tiling.py')
             tiling_save_dir = TEMP_DIR + '/tiles'
             block_width = 512
             os.system(
                 f"conda run -n {conda_env_name} python {tiling_script} --in_path {downsampled_las_path} --out_dir {tiling_save_dir} --block_width {block_width}")
 
             # 2. inference using a different conda environment
-            interface_script = "/local/scratch0/hanyang/Codes/point_cloud_visualizer/ptrsfmer_inferency.py"
+            interface_script = os.path.join(os.path.dirname(__file__), 'ptrsfmer_inferency.py')
             os.system(f"conda run -n {conda_env_name} python {interface_script}")
             # 3. merge classified tiles
             test_result_folder = TEMP_DIR + '/tile_classification_results'
             in_pkl_dir = tiling_save_dir
             in_label_dir = test_result_folder
             classified_las_path = downsampled_las_path.replace('.las', '_classified.las')
-            os.system(f"conda run -n {conda_env_name} python /local/scratch0/hanyang/Codes/point_cloud_visualizer/stitching.py --in_pkl_dir {in_pkl_dir} --in_label_dir {in_label_dir} --out_las_path {classified_las_path}")
+            os.system(
+                f"conda run -n {conda_env_name} python {os.path.join(os.path.dirname(__file__), 'stitching.py')} --in_pkl_dir {in_pkl_dir} --in_label_dir {in_label_dir} --out_las_path {classified_las_path}")
             return classified_las_path
 
         def on_classify(original_las_path, downsampled_las_path, method):
@@ -432,4 +427,4 @@ def build_interface():
 
 if __name__ == "__main__":
     viewer = build_interface()
-    viewer.launch(debug=True, share=True)
+    viewer.launch(server_name="0.0.0.0", server_port=7860, debug=True)
