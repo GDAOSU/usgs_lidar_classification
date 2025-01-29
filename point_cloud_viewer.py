@@ -32,34 +32,29 @@ def convert_las_to_glb(las_file_path, glb_file_path):
     vertices = np.vstack((x, y, z)).T.astype(np.float32)
     print(f"Vertices shape: {vertices.shape}")
 
-    # Define color table for classifications
-    value_to_color = {
-        0: [1.0, 1.0, 1.0],
-        1: [1.0, 0.0, 0.0],
-        2: [1.0, 0.5, 0.0],
-        3: [1.0, 1.0, 0.0],
-        4: [0.5, 1.0, 0.0],
-        5: [0.0, 1.0, 0.0],
-        6: [0.0, 1.0, 0.5],
-        7: [0.0, 1.0, 1.0],
-        8: [0.0, 0.5, 1.0],
-        9: [0.0, 0.0, 1.0],
-        10: [0.5, 0.0, 1.0],
-        11: [0.75, 0.0, 1.0],
-        12: [1.0, 0.0, 1.0],
-        13: [1.0, 0.0, 0.75],
-        14: [1.0, 0.25, 0.25],
-        15: [0.75, 0.25, 0.25],
-        16: [0.75, 0.5, 0.25],
-        17: [0.75, 0.75, 0.25],
-        18: [0.5, 0.75, 0.25]
-    }
+    # US3D_CLASS_NAMES = {
+    #     0: "Unclassified",
+    #     2: "Ground",
+    #     5: "High Vegetation",
+    #     6: "Building",
+    #     9: "Water",
+    #     17: "Bridge Deck"}
 
+    US3D_CLASS_COLOR = {
+        0: "#000000",
+        2: "#eeeeee",
+        5: "#bee784",
+        6: "#86868a",
+        9: "#6ab8fb",
+        17: "#d02420"}
+
+    US3D_CLASS_COLOR = {k: tuple(int(v[i:i+2], 16) for i in (1, 3, 5)) for k, v in US3D_CLASS_COLOR.items()}
+    
     # Assign colors based on classification values
     classifications = points['classification']
     colors = np.array([
-        value_to_color.get(c, [0.5, 0.5, 0.5]) for c in classifications
-    ], dtype=np.float32).flatten()
+        US3D_CLASS_COLOR.get(c, (0, 0, 0)) for c in classifications
+    ], dtype=np.float32).flatten() / 255.0
 
     # Create glTF data structure
     gltf = GLTF2()
@@ -160,7 +155,8 @@ def build_interface():
                     minimum=1,
                     maximum=10_000_000,
                     value=100_000,
-                    step=1
+                    step=1,
+                    visible=False
                 )
             with gr.Column():
                 with gr.Row():
@@ -217,7 +213,7 @@ def build_interface():
                 # area = (original_pcd.get_max_bound() - original_pcd.get_min_bound())[:2].prod()
                 # voxel_size = np.sqrt(area / max_points)
                 # strategy 3: 1m x 1m x 1m voxel size
-                voxel_size = 5 / original_las.points.scales[0]  # m / scale
+                voxel_size = 1 / original_las.points.scales[0]  # m / scale
                 quantized = np.floor(original_points / voxel_size)
 
                 voxel_dict = {}
@@ -340,6 +336,20 @@ def build_interface():
                 classified_las_path = classify_randla(downsampled_las_path)
             else:
                 raise ValueError("Unknown method")
+
+            # remap the classification values
+            COMPACT_IDX = {
+                0: 0,
+                2: 1,
+                5: 2,
+                6: 3,
+                9: 4,
+                17: 5}
+            COMPACT_IDX_2_ORIGIN_IDX = {v:k for k,v in COMPACT_IDX.items()}
+            classified_las = laspy.read(classified_las_path)
+            origin_classifcation = [COMPACT_IDX_2_ORIGIN_IDX[i] for i in classified_las.classification]
+            classified_las.classification = origin_classifcation
+            classified_las.write(classified_las_path)
 
             classified_glb_path = classified_las_path.replace('.las', '.glb')
             convert_las_to_glb(classified_las_path, classified_glb_path)
