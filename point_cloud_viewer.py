@@ -122,7 +122,8 @@ def convert_las_to_glb(las_file_path, glb_file_path):
 
 def build_interface():
     with gr.Blocks() as main_viewer:
-        gr.Markdown("## Point Cloud Classification Visualizer")
+        gr.Markdown("## USGS Lidar Classification")
+        gr.Markdown("Github: https://github.com/GDAOSU/usgs_lidar_classification")
 
         original_las_path_state = gr.State()
         downsampled_las_path_state = gr.State()
@@ -160,12 +161,13 @@ def build_interface():
                 )
             with gr.Column():
                 with gr.Row():
-                    clear_btn = gr.Button("Clear")
                     classify_btn = gr.Button("Classify")
+                    download_upsampled_btn = gr.Button("Download Result")
+                    clear_btn = gr.Button("Clear")
                 with gr.Row():
-                    download_downsampled_btn = gr.Button("Download Downsampled")
-                    download_upsampled_btn = gr.Button("Download Upsampled")
-                downsampled_classified_las_file_out = gr.File(visible=True, label="Downsampled Classified LAS")
+                    download_downsampled_btn = gr.Button("Download Downsampled",visible=False)
+                    # download_upsampled_btn = gr.Button("Download Classification Result")
+                downsampled_classified_las_file_out = gr.File(visible=False, label="Downsampled Classified LAS")
                 upsampled_classified_las_file_out = gr.File(visible=True, label="Upsampled Classified LAS")
 
         ##############################
