@@ -80,7 +80,15 @@ docker run --gpus 'all,"capabilities=compute,utility,graphics"' -p 7860:7860 -it
 
 ### 2.3 Output
 
-- The final classification results retain the original format and resolution.
+- The final classification results maintain the original format and resolution.  
+- The classified numbers correspond to the following categories:
+
+  - **0**: Unclassified  
+  - **2**: Ground  
+  - **5**: High Vegetation  
+  - **6**: Building  
+  - **9**: Water  
+  - **17**: Bridge Deck  
 
 ------
 

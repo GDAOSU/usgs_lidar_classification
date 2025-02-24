@@ -143,11 +143,11 @@ def build_interface():
         with gr.Row():
             with gr.Column():
                 file_input = gr.File(
-                    label="Upload LAS File",
+                    label="Upload LAS/LAZ File",
                     type="filepath",
                 )
                 method_dd = gr.Dropdown(
-                    label='Selet Method',
+                    label='Select Method',
                     choices=['PointTransformer', 'RandLA-Net'],
                     value="PointTransformer"
                 )
@@ -168,7 +168,7 @@ def build_interface():
                     download_downsampled_btn = gr.Button("Download Downsampled",visible=False)
                     # download_upsampled_btn = gr.Button("Download Classification Result")
                 downsampled_classified_las_file_out = gr.File(visible=False, label="Downsampled Classified LAS")
-                upsampled_classified_las_file_out = gr.File(visible=True, label="Upsampled Classified LAS")
+                upsampled_classified_las_file_out = gr.File(visible=True, label="Classified File")
 
         ##############################
         # Event handlers
@@ -301,7 +301,7 @@ def build_interface():
             # 3. merge classified tiles
             in_pkl_dir = tiling_save_dir
             in_label_dir = test_result_folder
-            classified_las_path = downsampled_las_path.replace('.las', '_classified.las')
+            classified_las_path = downsampled_las_path.replace('.las', '_randlanet_classified.las')
             os.system(
                 f"conda run -n {conda_env_name} python {os.path.join(os.path.dirname(__file__), 'stitching.py')} --in_pkl_dir {in_pkl_dir} --in_label_dir {in_label_dir} --out_las_path {classified_las_path}")
             return classified_las_path
@@ -323,7 +323,7 @@ def build_interface():
             test_result_folder = TEMP_DIR + '/tile_classification_results'
             in_pkl_dir = tiling_save_dir
             in_label_dir = test_result_folder
-            classified_las_path = downsampled_las_path.replace('.las', '_classified.las')
+            classified_las_path = downsampled_las_path.replace('.las', '_pointtransformer_classified.las')
             os.system(
                 f"conda run -n {conda_env_name} python {os.path.join(os.path.dirname(__file__), 'stitching.py')} --in_pkl_dir {in_pkl_dir} --in_label_dir {in_label_dir} --out_las_path {classified_las_path}")
             return classified_las_path
@@ -416,9 +416,11 @@ def build_interface():
             _, idx = tree.query(original_xyz, k=1)
             original_las.points['classification'] = classified_points[idx, 3].astype(np.uint8)
             if SUFFIX == '.laz':
-                upsampled_las_path = original_las_path.replace('.laz', '_upsampled_classified.laz')
+                classified_method = classified_las_path.split('_')[-2]
+                upsampled_las_path = original_las_path.replace('.laz', f'_{classified_method}_classified.laz')
             elif SUFFIX == '.las':
-                upsampled_las_path = original_las_path.replace('.las', '_upsampled_classified.las')
+                classified_method = classified_las_path.split('_')[-2]
+                upsampled_las_path = original_las_path.replace('.las', f'_{classified_method}_classified.las')
             else:
                 raise ValueError("Unknown file type")
             original_las.write(upsampled_las_path)
