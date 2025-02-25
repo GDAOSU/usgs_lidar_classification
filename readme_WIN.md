@@ -8,6 +8,7 @@
         ![](readme_figures/download_docker2.png)
     - Restart your system after installation.
     - Open **Docker Desktop**.
+    
         ![](readme_figures/docker_agree.png)
 2. **Check Docker Installation and GPU Capacity**
     - Run `check_docker_gpu.bat` to verify that Docker is installed correctly and detect GPU support.
