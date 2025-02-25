@@ -1,56 +1,29 @@
-**Usage for Windows system:**
+### **Usage for Windows System**
+
+**Note: All the used .bat files are located in the win_bat directory.**
 
 1. **Download and Install Docker Desktop**
-
     - Visit [Docker Desktop](https://www.docker.com/) and install the application.
-        - ![](readme_figures/download_docker1.png)
-        - ![](readme_figures/download_docker2.png)
+        ![](readme_figures/download_docker1.png)
+        ![](readme_figures/download_docker2.png)
     - Restart your system after installation.
     - Open **Docker Desktop**.
-        - ![](readme_figures/docker_agree.png)
-
-2. **Verify GPU Support in Docker**
-
-    - Open **Terminal**.
-
-    - Run the following command to check if Docker can detect your GPU:
-
-        ```
-        docker run --rm -it --gpus=all nvcr.io/nvidia/k8s/cuda-sample:nbody nbody -gpu
-        ```
-
-    - If the output shows GPU computation, your setup is working correctly.
-
-        - ![](readme_figures/docker_check_GPU.png)
-        - Reference: [Docker GPU Support](https://docs.docker.com/desktop/features/gpu/).
-
-3. **Download the USGS LiDAR Point Cloud Classification Tool Docker Image**
-
-    ​	![](readme_figures/docker_main.png)
-
-    - Pull 'gdaosu/usgs_lidar_classification:v1.0'
-
-        ![](readme_figures/docker_pull_image.png)
-
-4. **Run the Application**
-
-    - **Do not use the "Run" button in Docker Desktop GUI**, as it does not support GPU.
-
-    - Instead, open **Terminal** and run:
-
-        ```
-        docker run --gpus "all" -p 7860:7860 -it gdaosu/usgs_lidar_classification:v1.0
-        ```
-
-5. **Access the Tool**
-
-    - Open your browser and visit:
-
-        ```
-        http://localhost:7860
-        ```
-
-    - You should now be able to use the software.
-
-        - ![](readme_figures/tool_GUI.png)
-
+        ![](readme_figures/docker_agree.png)
+2. **Check Docker Installation and GPU Capacity**
+    - Run `check_docker_gpu.bat` to verify that Docker is installed correctly and detect GPU support.
+    - You should see an output similar to the following if your GPU is detected successfully.
+        ![](readme_figures/check_docker_GPU.png)
+3. **Install the Docker Image** *(One-time setup)*
+    - Execute `install_win.bat` to download and install the necessary Docker image.
+    - **Note:** This step only needs to be performed **once** unless a reinstallation is required.
+        ![](readme_figures/install_win.png)
+4. **Start the USGS LiDAR Classification Software**
+    - Run `start_win.bat` to start the software.
+    - Wait for the browser to automatically open the application interface.
+        ![](readme_figures/start_win.png)
+        ![](readme_figures/tool_GUI_0.png)
+        ![](readme_figures/tool_GUI.png)
+5. **Stop the Program**
+    - To safely stop the program, execute `stop_win.bat`.
+    - The shutdown process may take approximately **10 seconds** to complete.
+        ![](readme_figures/stop_docker.png)
