@@ -8,7 +8,7 @@ The Point Cloud Classification Tool enables efficient classification of point cl
 
 ## 2. Usage
 
-**These instructions are for Linux systems. For Windows instructions, refer to:** ![](readme_WIN.md)
+**These instructions are for Linux systems. For Windows instructions, refer to:**  [readme_WIN.md](readme_WIN.md)
 
 ### 2.1 Data Input
 
